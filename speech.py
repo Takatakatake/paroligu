@@ -170,8 +170,8 @@ def ensure_bundled_rhvoice() -> RHVoiceRuntime | None:
     command.chmod(command.stat().st_mode | 0o755)
     env = {
         "LD_LIBRARY_PATH": _join_env_paths(lib_dir, os.environ.get("LD_LIBRARY_PATH")),
-        "RHVOICEDATAPATH": str(data_dir),
-        "RHVOICECONFIGPATH": str(config_dir),
+        "RHVOICE_DATA_PATH": str(data_dir),
+        "RHVOICE_CONFIG_PATH": str(config_dir),
     }
     return RHVoiceRuntime(command=str(command), env=env)
 
@@ -340,7 +340,7 @@ def synthesize_wav(text: str, options: SynthesisOptions | None = None) -> bytes:
                 stderr = (
                     f"{stderr} "
                     f"(command={runtime.command}, "
-                    f"RHVOICEDATAPATH={runtime.env.get('RHVOICEDATAPATH', '<system>')})"
+                    f"RHVOICE_DATA_PATH={runtime.env.get('RHVOICE_DATA_PATH', '<system>')})"
                 )
             raise RHVoiceError(stderr or "RHVoice failed without an error message.")
 

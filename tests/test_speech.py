@@ -9,6 +9,7 @@ from speech import (
     SynthesisOptions,
     build_rhvoice_command,
     convert_x_system,
+    ensure_bundled_rhvoice,
     prepare_text,
     safe_wav_filename,
 )
@@ -63,6 +64,34 @@ class SpeechTests(unittest.TestCase):
             {"PAROLIGU_USE_SYSTEM_RHVOICE": "1", "RHVOICE_TEST_BIN": "custom-rhvoice"},
         ):
             self.assertEqual(find_rhvoice_command(), "/mock/RHVoice-test")
+
+    def test_bundled_runtime_uses_rhvoice_env_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root_dir = Path(tmp_dir) / "root"
+            required_paths = (
+                root_dir / "usr" / "bin" / "RHVoice-test",
+                root_dir / "usr" / "lib" / "x86_64-linux-gnu" / "libRHVoice_core.so.10",
+                root_dir / "usr" / "lib" / "x86_64-linux-gnu" / "libRHVoice_audio.so.2",
+                root_dir / "usr" / "share" / "RHVoice" / "languages" / "Esperanto" / "language.info",
+                root_dir / "usr" / "share" / "RHVoice" / "voices" / "spomenka" / "voice.info",
+            )
+            for path in required_paths:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("ok\n", encoding="utf-8")
+            (Path(tmp_dir) / ".complete").write_text("ok\n", encoding="utf-8")
+
+            with (
+                patch("speech.RHVOICE_BUNDLE_CACHE", Path(tmp_dir)),
+                patch("speech.platform.system", return_value="Linux"),
+                patch("speech.platform.machine", return_value="x86_64"),
+            ):
+                runtime = ensure_bundled_rhvoice()
+
+        self.assertIsNotNone(runtime)
+        assert runtime is not None
+        self.assertIn("RHVOICE_DATA_PATH", runtime.env)
+        self.assertIn("RHVOICE_CONFIG_PATH", runtime.env)
+        self.assertNotIn("RHVOICEDATAPATH", runtime.env)
 
 
 if __name__ == "__main__":
