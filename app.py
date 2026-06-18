@@ -49,7 +49,6 @@ def render_sidebar() -> tuple[SynthesisOptions, int]:
     rate = st.sidebar.slider("速度", min_value=50, max_value=200, value=100, step=5)
     pitch = st.sidebar.slider("高さ", min_value=50, max_value=200, value=100, step=5)
     volume = st.sidebar.slider("音量", min_value=50, max_value=200, value=100, step=5)
-    sample_rate = st.sidebar.selectbox("サンプルレート", options=[24_000, 16_000], index=0)
     mp3_bitrate = st.sidebar.selectbox(
         "MP3ビットレート",
         options=list(SUPPORTED_MP3_BITRATES),
@@ -74,7 +73,6 @@ def render_sidebar() -> tuple[SynthesisOptions, int]:
             rate=rate,
             pitch=pitch,
             volume=volume,
-            sample_rate=sample_rate,
         ),
         mp3_bitrate,
     )

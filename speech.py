@@ -20,8 +20,7 @@ from urllib.request import urlopen
 
 VOICE_PROFILE = "spomenka"
 MAX_TEXT_CHARS = 20_000
-SUPPORTED_SAMPLE_RATES = (16_000, 24_000)
-SUPPORTED_MP3_BITRATES = (64, 96, 128, 160, 192, 256, 320)
+SUPPORTED_MP3_BITRATES = (64, 96, 128, 160)
 COMMAND_CANDIDATES = ("RHVoice-test", "rhvoice-test", "rhvoice.test")
 MP3_COMMAND_CANDIDATES = ("lame",)
 RHVOICE_BUNDLE_VERSION = "trixie-1.14.0-2-amd64"
@@ -74,7 +73,6 @@ class SynthesisOptions:
     rate: int = 100
     pitch: int = 100
     volume: int = 100
-    sample_rate: int = 24_000
 
     def validate(self) -> None:
         for label, value in (
@@ -84,10 +82,6 @@ class SynthesisOptions:
         ):
             if not 50 <= value <= 200:
                 raise ValueError(f"{label}は50から200の範囲で指定してください。")
-
-        if self.sample_rate not in SUPPORTED_SAMPLE_RATES:
-            allowed = ", ".join(str(rate) for rate in SUPPORTED_SAMPLE_RATES)
-            raise ValueError(f"サンプルレートは次のいずれかを指定してください: {allowed}。")
 
 
 def convert_x_system(text: str) -> str:
@@ -310,8 +304,6 @@ def build_rhvoice_command(
         str(options.pitch),
         "--volume",
         str(options.volume),
-        "--sample-rate",
-        str(options.sample_rate),
         "--input",
         str(input_path),
         "--output",

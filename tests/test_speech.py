@@ -50,14 +50,13 @@ class SpeechTests(unittest.TestCase):
                 "/usr/bin/RHVoice-test",
                 input_path,
                 output_path,
-                SynthesisOptions(rate=90, pitch=105, volume=120, sample_rate=16_000),
+                SynthesisOptions(rate=90, pitch=105, volume=120),
             )
 
         self.assertEqual(command[0], "/usr/bin/RHVoice-test")
         self.assertIn("--profile", command)
         self.assertIn("spomenka", command)
-        self.assertIn("--sample-rate", command)
-        self.assertIn("16000", command)
+        self.assertNotIn("--sample-rate", command)
 
     def test_build_lame_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -82,7 +81,7 @@ class SpeechTests(unittest.TestCase):
             SynthesisOptions(rate=20).validate()
 
         with self.assertRaises(ValueError):
-            build_lame_command("lame", Path("in.wav"), Path("out.mp3"), 111)
+            build_lame_command("lame", Path("in.wav"), Path("out.mp3"), 192)
 
     def test_unknown_notation_raises(self) -> None:
         with self.assertRaises(ValueError):
