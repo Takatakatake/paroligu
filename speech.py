@@ -119,6 +119,11 @@ def resolve_rhvoice_runtime() -> RHVoiceRuntime | None:
     env_command = os.environ.get("RHVOICE_TEST_BIN")
     candidates = (env_command, *COMMAND_CANDIDATES) if env_command else COMMAND_CANDIDATES
 
+    if os.environ.get("PAROLIGU_USE_SYSTEM_RHVOICE") != "1":
+        bundled_runtime = ensure_bundled_rhvoice()
+        if bundled_runtime:
+            return bundled_runtime
+
     if os.environ.get("PAROLIGU_FORCE_BUNDLED_RHVOICE") != "1":
         for candidate in candidates:
             if not candidate:
@@ -156,10 +161,10 @@ def ensure_bundled_rhvoice() -> RHVoiceRuntime | None:
     config_dir = root_dir / "etc" / "RHVoice"
     marker = RHVOICE_BUNDLE_CACHE / ".complete"
 
-    if not marker.exists() or not command.exists():
+    if not marker.exists() or not bundled_resources_are_complete(root_dir):
         install_bundled_rhvoice(root_dir, marker)
 
-    if not command.exists():
+    if not command.exists() or not bundled_resources_are_complete(root_dir):
         return None
 
     command.chmod(command.stat().st_mode | 0o755)
@@ -169,6 +174,17 @@ def ensure_bundled_rhvoice() -> RHVoiceRuntime | None:
         "RHVOICECONFIGPATH": str(config_dir),
     }
     return RHVoiceRuntime(command=str(command), env=env)
+
+
+def bundled_resources_are_complete(root_dir: Path) -> bool:
+    required_paths = (
+        root_dir / "usr" / "bin" / "RHVoice-test",
+        root_dir / "usr" / "lib" / "x86_64-linux-gnu" / "libRHVoice_core.so.10",
+        root_dir / "usr" / "lib" / "x86_64-linux-gnu" / "libRHVoice_audio.so.2",
+        root_dir / "usr" / "share" / "RHVoice" / "languages" / "Esperanto" / "language.info",
+        root_dir / "usr" / "share" / "RHVoice" / "voices" / "spomenka" / "voice.info",
+    )
+    return all(path.exists() for path in required_paths)
 
 
 def install_bundled_rhvoice(root_dir: Path, marker: Path) -> None:
@@ -186,6 +202,9 @@ def install_bundled_rhvoice(root_dir: Path, marker: Path) -> None:
             extract_deb_data(deb_path, root_dir)
     except (OSError, tarfile.TarError, URLError) as exc:
         raise RHVoiceError(f"Bundled RHVoice setup failed: {exc}") from exc
+
+    if not bundled_resources_are_complete(root_dir):
+        raise RHVoiceError("Bundled RHVoice setup is missing Esperanto or Spomenka resources.")
 
     marker.write_text("ok\n", encoding="utf-8")
 
@@ -246,7 +265,7 @@ def safe_extract_tar(archive: tarfile.TarFile, target_dir: Path) -> None:
         member_path = target_root / member.name.lstrip("./")
         if not member_path.resolve().is_relative_to(target_root):
             raise RHVoiceError(f"Unsafe path in archive: {member.name}")
-        archive.extract(member, target_root)
+        archive.extract(member, target_root, filter="fully_trusted")
 
 
 def _join_env_paths(first: Path, existing: str | None) -> str:
@@ -317,6 +336,12 @@ def synthesize_wav(text: str, options: SynthesisOptions | None = None) -> bytes:
 
         if completed.returncode != 0:
             stderr = completed.stderr.strip() or completed.stdout.strip()
+            if "No language resources are available" in stderr:
+                stderr = (
+                    f"{stderr} "
+                    f"(command={runtime.command}, "
+                    f"RHVOICEDATAPATH={runtime.env.get('RHVOICEDATAPATH', '<system>')})"
+                )
             raise RHVoiceError(stderr or "RHVoice failed without an error message.")
 
         if not output_path.exists() or output_path.stat().st_size == 0:

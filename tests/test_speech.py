@@ -58,7 +58,10 @@ class SpeechTests(unittest.TestCase):
     def test_find_command_env_precedence(self, _which) -> None:
         from speech import find_rhvoice_command
 
-        with patch.dict("speech.os.environ", {"RHVOICE_TEST_BIN": "custom-rhvoice"}):
+        with patch.dict(
+            "speech.os.environ",
+            {"PAROLIGU_USE_SYSTEM_RHVOICE": "1", "RHVOICE_TEST_BIN": "custom-rhvoice"},
+        ):
             self.assertEqual(find_rhvoice_command(), "/mock/RHVoice-test")
 
 
