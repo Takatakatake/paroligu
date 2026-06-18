@@ -86,18 +86,18 @@ def main() -> None:
     with right:
         st.subheader("音声")
         if synthesize:
-            for key in ("wav_bytes", "duration"):
-                st.session_state.pop(key, None)
             try:
                 prepared_text = prepare_text(text, notation)
-                wav_bytes = synthesize_wav(prepared_text, options)
+                with st.spinner("音声を生成しています..."):
+                    wav_bytes = synthesize_wav(prepared_text, options)
+                    duration = wav_duration_seconds(wav_bytes)
             except ValueError as exc:
                 st.error(str(exc))
             except RHVoiceError as exc:
                 st.error(f"音声生成に失敗しました: {exc}")
             else:
                 st.session_state["wav_bytes"] = wav_bytes
-                st.session_state["duration"] = wav_duration_seconds(wav_bytes)
+                st.session_state["duration"] = duration
 
         wav_bytes = st.session_state.get("wav_bytes")
         if wav_bytes:

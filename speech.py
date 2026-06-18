@@ -76,16 +76,16 @@ class SynthesisOptions:
 
     def validate(self) -> None:
         for label, value in (
-            ("rate", self.rate),
-            ("pitch", self.pitch),
-            ("volume", self.volume),
+            ("速度", self.rate),
+            ("高さ", self.pitch),
+            ("音量", self.volume),
         ):
             if not 50 <= value <= 200:
-                raise ValueError(f"{label} must be between 50 and 200.")
+                raise ValueError(f"{label}は50から200の範囲で指定してください。")
 
         if self.sample_rate not in SUPPORTED_SAMPLE_RATES:
             allowed = ", ".join(str(rate) for rate in SUPPORTED_SAMPLE_RATES)
-            raise ValueError(f"sample_rate must be one of: {allowed}.")
+            raise ValueError(f"サンプルレートは次のいずれかを指定してください: {allowed}。")
 
 
 def convert_x_system(text: str) -> str:
@@ -111,7 +111,7 @@ def prepare_text(text: str, notation: str = "unicode") -> str:
     if notation == "x-system":
         cleaned = convert_x_system(cleaned)
     elif notation != "unicode":
-        raise ValueError("notation must be 'unicode' or 'x-system'.")
+        raise ValueError("表記は Unicode または x記法を指定してください。")
     return cleaned
 
 
@@ -305,9 +305,9 @@ def synthesize_wav(text: str, options: SynthesisOptions | None = None) -> bytes:
     text = text.strip()
 
     if not text:
-        raise ValueError("Text is empty.")
+        raise ValueError("エスペラント文を入力してください。")
     if len(text) > MAX_TEXT_CHARS:
-        raise ValueError(f"Text is too long. Maximum is {MAX_TEXT_CHARS:,} characters.")
+        raise ValueError(f"テキストが長すぎます。最大 {MAX_TEXT_CHARS:,} 文字までです。")
 
     runtime = resolve_rhvoice_runtime()
     if runtime is None:
