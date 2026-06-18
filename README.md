@@ -1,6 +1,6 @@
 # Spomenka Esperanto TTS
 
-エスペラント文を RHVoice の Spomenka 音声で WAV 化する Streamlit アプリです。生成した音声はブラウザ上で再生でき、WAV ファイルとして保存できます。
+エスペラント文を RHVoice の Spomenka 音声で音声ファイル化する Streamlit アプリです。生成した音声はブラウザ上で再生でき、WAV または MP3 ファイルとして保存できます。
 
 ## ローカル実行
 
@@ -8,7 +8,7 @@ Ubuntu/Debian 系の環境では先に RHVoice を入れます。
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y rhvoice rhvoice-esperanto
+sudo apt-get install -y rhvoice rhvoice-esperanto lame
 ```
 
 Python 環境を作って Streamlit を起動します。
@@ -25,9 +25,10 @@ streamlit run app.py
 リポジトリ直下の `requirements.txt` と `packages.txt` をそのまま GitHub に置いてください。
 
 - `requirements.txt`: Streamlit をインストールします。
-- `packages.txt`: RHVoice の実行に必要な `main` 側の共有ライブラリだけを apt でインストールします。
+- `packages.txt`: RHVoice の実行に必要な `main` 側の共有ライブラリと MP3 変換用の `lame` を apt でインストールします。
 
 RHVoice 本体と Spomenka 音声は Debian 公式の `non-free` `.deb` をアプリ起動時にユーザー領域へダウンロードし、SHA256 を検証してから展開します。Streamlit Community Cloud では `non-free` リポジトリ追加に失敗するため、この方式で回避しています。
+MP3 保存は、生成済みの WAV を `lame` コマンドで変換して作成します。
 
 Streamlit Community Cloud では、New app でこの GitHub リポジトリを選び、メインファイルに `app.py` を指定します。
 

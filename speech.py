@@ -21,7 +21,9 @@ from urllib.request import urlopen
 VOICE_PROFILE = "spomenka"
 MAX_TEXT_CHARS = 20_000
 SUPPORTED_SAMPLE_RATES = (16_000, 24_000)
+SUPPORTED_MP3_BITRATES = (64, 96, 128, 160, 192, 256, 320)
 COMMAND_CANDIDATES = ("RHVoice-test", "rhvoice-test", "rhvoice.test")
+MP3_COMMAND_CANDIDATES = ("lame",)
 RHVOICE_BUNDLE_VERSION = "trixie-1.14.0-2-amd64"
 RHVOICE_BUNDLE_CACHE = Path.home() / ".cache" / "paroligu" / RHVOICE_BUNDLE_VERSION
 
@@ -148,6 +150,23 @@ def find_rhvoice_command() -> str | None:
     except RHVoiceError:
         return None
     return runtime.command if runtime else None
+
+
+def find_mp3_encoder_command() -> str | None:
+    env_command = os.environ.get("LAME_BIN")
+    candidates = (env_command, *MP3_COMMAND_CANDIDATES) if env_command else MP3_COMMAND_CANDIDATES
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+        candidate_path = Path(candidate)
+        if candidate_path.exists() and os.access(candidate_path, os.X_OK):
+            return str(candidate_path)
+
+    return None
 
 
 def ensure_bundled_rhvoice() -> RHVoiceRuntime | None:
@@ -300,6 +319,26 @@ def build_rhvoice_command(
     ]
 
 
+def build_lame_command(
+    command: str,
+    input_path: Path,
+    output_path: Path,
+    bitrate: int = 128,
+) -> list[str]:
+    if bitrate not in SUPPORTED_MP3_BITRATES:
+        allowed = ", ".join(str(value) for value in SUPPORTED_MP3_BITRATES)
+        raise ValueError(f"MP3ビットレートは次のいずれかを指定してください: {allowed}。")
+
+    return [
+        command,
+        "--quiet",
+        "-b",
+        str(bitrate),
+        str(input_path),
+        str(output_path),
+    ]
+
+
 def synthesize_wav(text: str, options: SynthesisOptions | None = None) -> bytes:
     options = options or SynthesisOptions()
     text = text.strip()
@@ -350,6 +389,39 @@ def synthesize_wav(text: str, options: SynthesisOptions | None = None) -> bytes:
         return output_path.read_bytes()
 
 
+def encode_mp3(wav_bytes: bytes, bitrate: int = 128) -> bytes:
+    command = find_mp3_encoder_command()
+    if command is None:
+        raise RHVoiceError(
+            "MP3エンコーダー lame が見つかりません。packages.txt に lame が必要です。"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="spomenka-mp3-") as tmp_dir:
+        input_path = Path(tmp_dir) / "speech.wav"
+        output_path = Path(tmp_dir) / "speech.mp3"
+        input_path.write_bytes(wav_bytes)
+
+        try:
+            completed = subprocess.run(
+                build_lame_command(command, input_path, output_path, bitrate),
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RHVoiceError("MP3変換がタイムアウトしました。") from exc
+
+        if completed.returncode != 0:
+            stderr = completed.stderr.strip() or completed.stdout.strip()
+            raise RHVoiceError(stderr or "MP3変換に失敗しました。")
+
+        if not output_path.exists() or output_path.stat().st_size == 0:
+            raise RHVoiceError("MP3ファイルが作成されませんでした。")
+
+        return output_path.read_bytes()
+
+
 def wav_duration_seconds(wav_bytes: bytes) -> float:
     with wave.open(io.BytesIO(wav_bytes), "rb") as wav_file:
         frames = wav_file.getnframes()
@@ -357,11 +429,23 @@ def wav_duration_seconds(wav_bytes: bytes) -> float:
     return frames / float(rate)
 
 
-def safe_wav_filename(value: str) -> str:
+def safe_audio_filename(value: str, extension: str) -> str:
+    extension = extension.lower().lstrip(".")
+    if extension not in {"wav", "mp3"}:
+        raise ValueError("extension must be 'wav' or 'mp3'.")
+
     stem = value.strip() or "spomenka"
-    stem = re.sub(r"\.wav$", "", stem, flags=re.IGNORECASE)
+    stem = re.sub(r"\.(wav|mp3)$", "", stem, flags=re.IGNORECASE)
     stem = re.sub(r"[/\\:*?\"<>|\x00-\x1f]+", "_", stem)
     stem = re.sub(r"\s+", "_", stem).strip("._- ")
     if not stem:
         stem = "spomenka"
-    return f"{stem}.wav"
+    return f"{stem}.{extension}"
+
+
+def safe_wav_filename(value: str) -> str:
+    return safe_audio_filename(value, "wav")
+
+
+def safe_mp3_filename(value: str) -> str:
+    return safe_audio_filename(value, "mp3")
