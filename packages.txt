@@ -1,2 +1,7 @@
-rhvoice
-rhvoice-esperanto
+ca-certificates
+libao4
+libglibmm-2.4-1t64
+libportaudio2
+libpulse0
+libsigc++-2.0-0v5
+libsonic0

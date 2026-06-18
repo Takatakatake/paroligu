@@ -25,7 +25,9 @@ streamlit run app.py
 リポジトリ直下の `requirements.txt` と `packages.txt` をそのまま GitHub に置いてください。
 
 - `requirements.txt`: Streamlit をインストールします。
-- `packages.txt`: `rhvoice` と `rhvoice-esperanto` を apt でインストールします。
+- `packages.txt`: RHVoice の実行に必要な `main` 側の共有ライブラリだけを apt でインストールします。
+
+RHVoice 本体と Spomenka 音声は Debian 公式の `non-free` `.deb` をアプリ起動時にユーザー領域へダウンロードし、SHA256 を検証してから展開します。Streamlit Community Cloud では `non-free` リポジトリ追加に失敗するため、この方式で回避しています。
 
 Streamlit Community Cloud では、New app でこの GitHub リポジトリを選び、メインファイルに `app.py` を指定します。
 
