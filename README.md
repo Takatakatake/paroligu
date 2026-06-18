@@ -22,11 +22,10 @@ streamlit run app.py
 
 ## Streamlit Community Cloud
 
-リポジトリ直下の `requirements.txt`、`packages.txt`、`sources.list` をそのまま GitHub に置いてください。
+リポジトリ直下の `requirements.txt` と `packages.txt` をそのまま GitHub に置いてください。
 
 - `requirements.txt`: Streamlit をインストールします。
 - `packages.txt`: `rhvoice` と `rhvoice-esperanto` を apt でインストールします。
-- `sources.list`: Debian bookworm の `non-free` セクションを有効にします。RHVoice の Debian パッケージは `non-free` にあります。
 
 Streamlit Community Cloud では、New app でこの GitHub リポジトリを選び、メインファイルに `app.py` を指定します。
 
